@@ -8,6 +8,8 @@ I have generated the code with chatgpt and images from gemini and video from pix
 The webpage is dynamic in nature with a video playing in background.
 The backend is supported by google firebase and it is fully working and we can receive name, email, organization of user and their message.
 
+It is hosted on -> https://codecaddy-landing.web.app/
+
 NOTE - The images 1,2,3 are under assets -> img AND video 1 is under assets -> videos 
        the hosting..cache file is under .firebase folder 
        
