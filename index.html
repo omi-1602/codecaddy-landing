@@ -1,0 +1,518 @@
+<!--
+Single-file landing page for "CodeCaddy" — a developer snippets & productivity app
+Technologies: Pure HTML, CSS, JS + Bootstrap 5 + Firebase (Firestore) for "Contact Us" backend
+How to use:
+ 1. Replace the firebaseConfig object below with your project's config (from Firebase Console > Project Settings).
+ 2. Enable Firestore in your Firebase project (in test mode for development) and update security rules before production.
+ 3. (Optional) Deploy to Firebase Hosting or serve locally (Live Server in VSCode).
+ 4. To enable email notifications, optionally deploy the provided Cloud Function (see the NODE_FUNCTION comment at the end).
+
+Files included in this single document:
+ - index.html (complete page)
+ - firebase rules (commented)
+ - example Cloud Function (Node.js) to send email on new contact (commented)
+
+Remove these comments before production.
+-->
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CodeCaddy — Snippets & Productivity for Developers</title>
+  <meta name="description" content="Manage code snippets, sync across devices, and integrate with your workflow.">
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+
+  <style>
+    :root{
+      --brand:#0d6efd;
+      --muted:#6c757d;
+    }
+    body{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;}
+    .hero{background:linear-gradient(120deg, rgba(13,110,253,0.08), rgba(13,110,253,0)); padding:80px 0}
+    .feature-icon{width:64px;height:64px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:28px}
+    .integrations img{max-height:40px;opacity:.85}
+    .card-ghost{border:1px solid rgba(0,0,0,0.05);box-shadow:0 6px 18px rgba(13,110,253,0.03)}
+    footer{background:#0b1220;color:#cfe0ff}
+    .faq-item button{width:100%;text-align:left}
+  </style>
+  <style>
+    :root{
+      --brand:#0d6efd;
+      --muted:#6c757d;
+      --bg:white;
+      --text:black;
+    }
+
+    [data-theme="dark"]{
+      --bg:#0b1220;
+      --text:#e6e6e6;
+    }
+
+    body{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; background:var(--bg); color:var(--text); transition:0.3s ease-in-out;}
+    .hero{background:linear-gradient(120deg, rgba(13,110,253,0.08), rgba(13,110,253,0)); padding:80px 0}
+    [data-theme="dark"] .hero{background:linear-gradient(120deg, rgba(13,110,253,0.15), rgba(13,110,253,0.05));}
+
+    nav, .card, footer{background:var(--bg) !important; color:var(--text) !important;}
+
+    .feature-icon{width:64px;height:64px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:28px}
+    .integrations img{max-height:40px;opacity:.85}
+    .card-ghost{border:1px solid rgba(0,0,0,0.05);box-shadow:0 6px 18px rgba(13,110,253,0.03)}
+    footer{background:#0b1220;color:#cfe0ff}
+    [data-theme="dark"] footer{background:#000b18;color:#d0e2ff;}
+
+    .faq-item button{width:100%;text-align:left}
+  </style>
+  <style>
+    /* Bootstrap component overrides for better dark-mode support */
+    [data-theme="dark"] .bg-light{background:#071024 !important;color:var(--text) !important}
+    [data-theme="dark"] .accordion-button{background:transparent;color:var(--text) !important}
+    [data-theme="dark"] .accordion-button:not(.collapsed){background:rgba(255,255,255,0.04)}
+    [data-theme="dark"] .text-muted{color:rgba(255,255,255,0.75) !important}
+    [data-theme="dark"] .btn-outline-secondary{color:var(--text);border-color:rgba(255,255,255,0.12)}
+    [data-theme="dark"] .btn-primary{background:var(--brand);border-color:var(--brand)}
+    [data-theme="dark"] .card{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04)}
+    [data-theme="dark"] nav.navbar{background:var(--bg) !important}
+    [data-theme="dark"] footer{background:#000814 !important}
+    [data-theme="dark"] .lead{color:rgba(230,230,230,0.85)}
+    /* ensure inputs are legible in dark */
+    [data-theme="dark"] input.form-control, [data-theme="dark"] textarea.form-control {background: rgba(255,255,255,0.03); color: var(--text); border:1px solid rgba(255,255,255,0.06)}
+    [data-theme="dark"] ::placeholder{color:rgba(255,255,255,0.4)}
+    /* FAQ FIXES */
+  [data-theme="dark"] .accordion-button.collapsed {
+    color: #e6e6e6 !important;
+    opacity: 1 !important;
+  }
+  [data-theme="dark"] .accordion-body {
+    color: #f1f1f1 !important;
+  }
+  [data-theme="dark"] .accordion-button {
+    background: rgba(255,255,255,0.04) !important;
+    color: #ffffff !important;
+  }
+  [data-theme="dark"] .accordion-button:not(.collapsed) {
+    background: rgba(255,255,255,0.08) !important;
+  }
+</style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
+  <div class="container d-flex justify-content-between align-items-center">
+    <div>
+      <a class="navbar-brand d-flex align-items-center" href="#">
+        <i class="bi bi-box-seam fs-3 text-primary me-2"></i>
+        <span class="fw-bold">CodeCaddy</span>
+      </a>
+    </div>
+    <div>
+      <button id="themeToggle" class="btn btn-outline-secondary btn-sm">🌙 Dark</button>
+    </div>
+    <a class="navbar-brand d-flex align-items-center" href="#">
+      <i class="bi bi-box-seam fs-3 text-primary me-2"></i>
+      <span class="fw-bold">CodeCaddy</span>
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navMenu">
+      <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center">
+        <li class="nav-item"><a class="nav-link" href="#features">Features</a></li>
+        <li class="nav-item"><a class="nav-link" href="#integrations">Integrations</a></li>
+        <li class="nav-item"><a class="nav-link" href="#faqs">FAQs</a></li>
+        <li class="nav-item"><a class="btn btn-primary ms-lg-3" href="#contact">Contact Us</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO WITH GLOBAL BACKGROUND VIDEO -->
+<section class="hero position-relative" style="min-height:80vh; display:flex; align-items:center;">
+  <!-- Background Video → FULL PAGE BACKGROUND -->
+  <video autoplay muted loop playsinline id="bgVideo" class="position-fixed w-100 h-100" style="top:0; left:0; object-fit:cover; z-index:-2; opacity:0.25;"><source src="assets\videos\video 1.mp4" type="video/mp4"></video>
+
+  <!-- Dark overlay for readability -->
+  <div class="position-fixed w-100 h-100" style="top:0; left:0; background:rgba(0,0,0,0.35); z-index:-1;"></div>
+
+  <div class="container">
+    <div class="row align-items-center">
+
+      <!-- TEXT LEFT SIDE -->
+      <div class="col-lg-7">
+        <h1 class="display-5 fw-bold">CodeCaddy — Your snippets, supercharged.</h1>
+        <p class="lead text-muted">Save, search, and share code snippets. Sync with your editor, access them anywhere, and speed up development.</p>
+        <div class="mt-4">
+          <a class="btn btn-primary btn-lg me-2" href="#contact">Get Early Access</a>
+          <a class="btn btn-outline-secondary btn-lg" href="#features">See Features</a>
+        </div>
+        <div class="mt-4">
+          <small class="text-muted">Trusted by teams at</small>
+          <div class="d-flex gap-3 align-items-center mt-2 integrations">
+            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" alt="GitHub">
+            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/visualstudio/visualstudio-plain.svg" alt="VSCode">
+            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/slack/slack-original.svg" alt="Slack">
+            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/jira/jira-original.svg" alt="Jira">
+          </div>
+        </div>
+      </div>
+
+      <!-- IMAGE 1 SHIFTED TO TOP-RIGHT CORNER -->
+      <div class="col-lg-5 d-none d-lg-block">
+        <img src="assets/img/Image 1.png" class="position-absolute" style="top:40px; right:40px; width:260px; border-radius:12px; box-shadow:0 8px 20px rgba(0,0,0,0.25);" alt="dashboard mockup">
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECOND IMAGE → SHIFTED BOTTOM-RIGHT CORNER -->
+<section class="position-relative" style="min-height:200px;">
+  <img src="assets/img/Image 2.png" class="position-absolute" style="bottom:20px; right:20px; width:260px; border-radius:12px; box-shadow:0 6px 16px rgba(0,0,0,0.25);" alt="Feature Preview Image">
+</section>
+
+<!-- THIRD IMAGE → SHIFTED BOTTOM-LEFT CORNER -->
+<section class="position-relative" style="min-height:200px;">
+  <img src="assets/img/Image 3.png" class="position-absolute" style="bottom:20px; left:20px; width:260px; border-radius:12px; box-shadow:0 6px 16px rgba(0,0,0,0.25);" alt="Additional Preview Image">
+</section>
+
+<!-- INTEGRATIONS -->
+<section id="integrations" class="py-5">
+  <div class="container text-center">
+    <h3 class="fw-bold">Integrations</h3>
+    <p class="text-muted">Plug into your existing workflow</p>
+    <div class="row g-3 justify-content-center mt-4">
+      <div class="col-6 col-md-3 col-lg-2">
+        <div class="p-3 border rounded text-center">
+          <i class="bi bi-github fs-1"></i>
+          <div class="small text-muted mt-2">GitHub</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3 col-lg-2">
+        <div class="p-3 border rounded text-center">
+          <i class="bi bi-code-slash fs-1"></i>
+          <div class="small text-muted mt-2">VS Code</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3 col-lg-2">
+        <div class="p-3 border rounded text-center">
+          <i class="bi bi-chat-dots fs-1"></i>
+          <div class="small text-muted mt-2">Slack</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3 col-lg-2">
+        <div class="p-3 border rounded text-center">
+          <i class="bi bi-journal-text fs-1"></i>
+          <div class="small text-muted mt-2">Jira</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features" class="py-5 bg-light">
+  <div class="container">
+    <h3 class="fw-bold text-center">Features</h3>
+    <p class="text-muted text-center">Everything a dev needs to store, search and share snippets.</p>
+
+    <div class="row g-4 mt-4">
+      <div class="col-md-6 col-lg-4">
+        <div class="card h-100 p-3">
+          <div class="d-flex gap-3 align-items-start">
+            <div class="feature-icon bg-primary text-white"><i class="bi bi-search"></i></div>
+            <div>
+              <h5 class="mb-1">Instant Search</h5>
+              <p class="text-muted mb-0">Powerful full-text and tag-based search so you find snippets in milliseconds.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6 col-lg-4">
+        <div class="card h-100 p-3">
+          <div class="d-flex gap-3 align-items-start">
+            <div class="feature-icon bg-success text-white"><i class="bi bi-cloud-arrow-up"></i></div>
+            <div>
+              <h5 class="mb-1">Sync & Backup</h5>
+              <p class="text-muted mb-0">Automatic sync across devices and encrypted backups for peace of mind.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6 col-lg-4">
+        <div class="card h-100 p-3">
+          <div class="d-flex gap-3 align-items-start">
+            <div class="feature-icon bg-warning text-white"><i class="bi bi-people"></i></div>
+            <div>
+              <h5 class="mb-1">Team Collab</h5>
+              <p class="text-muted mb-0">Share snippet collections with your team and keep everyone in sync.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6 col-lg-4">
+        <div class="card h-100 p-3">
+          <div class="d-flex gap-3 align-items-start">
+            <div class="feature-icon bg-danger text-white"><i class="bi bi-code-slash"></i></div>
+            <div>
+              <h5 class="mb-1">Editor Plugins</h5>
+              <p class="text-muted mb-0">Install our editor extensions for VS Code, JetBrains and more.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6 col-lg-4">
+        <div class="card h-100 p-3">
+          <div class="d-flex gap-3 align-items-start">
+            <div class="feature-icon bg-info text-white"><i class="bi bi-shield-lock"></i></div>
+            <div>
+              <h5 class="mb-1">Security</h5>
+              <p class="text-muted mb-0">AES-256 encryption for private snippets and SSO for teams.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6 col-lg-4">
+        <div class="card h-100 p-3">
+          <div class="d-flex gap-3 align-items-start">
+            <div class="feature-icon bg-secondary text-white"><i class="bi bi-gear"></i></div>
+            <div>
+              <h5 class="mb-1">Custom Templates</h5>
+              <p class="text-muted mb-0">Save formatted templates with language-aware highlighting for quick reuse.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- FAQS -->
+<section id="faqs" class="py-5">
+  <div class="container">
+    <h3 class="fw-bold text-center">FAQs</h3>
+    <p class="text-muted text-center">Got questions? We probably answered them below.</p>
+
+    <div class="accordion mt-4" id="faqAccordion">
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="faq1">
+          <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse1">Is CodeCaddy free?</button>
+        </h2>
+        <div id="collapse1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+          <div class="accordion-body">We offer a generous free tier for individual developers and paid plans for teams with extra features like SSO and team admin controls.</div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="faq2">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse2">Which editors are supported?</button>
+        </h2>
+        <div id="collapse2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+          <div class="accordion-body">Official extensions are available for VS Code, JetBrains IDEs, and a CLI for integration with other editors.</div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="faq3">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse3">How do you handle security?</button>
+        </h2>
+        <div id="collapse3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+          <div class="accordion-body">User data is encrypted at rest and in transit. Teams can enable SSO and enforce 2FA. We regularly run security audits.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact" class="py-5 bg-light">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-8">
+        <div class="card p-4">
+          <h4>Contact Us</h4>
+          <p class="text-muted">Have a question or want early access? Drop your details and we'll get back to you.</p>
+
+          <form id="contactForm" class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Full name</label>
+              <input id="name" class="form-control" placeholder="Your name" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Email</label>
+              <input id="email" type="email" class="form-control" placeholder="you@domain.com" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Organization (optional)</label>
+              <input id="org" class="form-control" placeholder="Company or team name">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Message</label>
+              <textarea id="message" class="form-control" rows="4" placeholder="Tell us what you need" required></textarea>
+            </div>
+
+            <div class="col-12 d-flex align-items-center">
+              <button id="submitBtn" class="btn btn-primary me-3">Send Message</button>
+              <div id="formStatus" class="text-muted"></div>
+            </div>
+          </form>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="py-5">
+  <div class="container">
+    <div class="row">
+      <div class="col-md-6">
+        <h5>CodeCaddy</h5>
+        <p class="small text-muted">Snippets, sync & collaboration for developers.</p>
+      </div>
+      <div class="col-md-6 text-md-end">
+        <small>© <span id="year"></span> CodeCaddy — Built with ♥</small>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- Bootstrap JS + Firebase -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+  // Replace the config below with your Firebase project's config
+  const firebaseConfig = {
+  apiKey: "AIzaSyB-D1ske9ABi6yyuoFqKqKE4HG50XgjeNs",
+  authDomain: "codecaddy-landing.firebaseapp.com",
+  projectId: "codecaddy-landing",
+  storageBucket: "codecaddy-landing.firebasestorage.app",
+  messagingSenderId: "101528432240",
+  appId: "1:101528432240:web:a226ccbfeded110e378eb5",
+  measurementId: "G-R8J5KCN4BS"
+};
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  // UI helpers
+  document.getElementById('year').textContent = new Date().getFullYear();
+
+  // Contact form handler
+  const contactForm = document.getElementById('contactForm');
+  const submitBtn = document.getElementById('submitBtn');
+  const status = document.getElementById('formStatus');
+
+  contactForm.addEventListener('submit', async function(e){
+    e.preventDefault();
+    submitBtn.disabled = true;
+    status.textContent = 'Sending...';
+
+    const payload = {
+      name: document.getElementById('name').value.trim(),
+      email: document.getElementById('email').value.trim(),
+      org: document.getElementById('org').value.trim() || null,
+      message: document.getElementById('message').value.trim(),
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    // Basic validation
+    if(!payload.name || !payload.email || !payload.message){
+      status.textContent = 'Please fill required fields.';
+      submitBtn.disabled = false;
+      return;
+    }
+
+    try{
+      const docRef = await db.collection('contacts').add(payload);
+      status.innerHTML = 'Thanks! We received your message. <span class="text-success">#' + docRef.id.slice(0,6) + '</span>';
+
+      // reset form
+      contactForm.reset();
+
+    }catch(err){
+      console.error(err);
+      status.textContent = 'An error occurred — please try again later.';
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+</script>
+
+<!--
+FIREBASE SECURITY RULES (example) - set in Firebase Console > Firestore > Rules (adjust before production)
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /contacts/{docId} {
+      allow create: if request.auth == null || request.auth.uid != null; // allow public create for contact form
+      allow read, update, delete: if false; // restrict reads/edits from clients
+    }
+  }
+}
+
+Note: For production, require Recaptcha or Cloud Function endpoint to limit abuse. Don't allow public reads of 'contacts'.
+-->
+
+<!--
+NODE_FUNCTION (optional) - Cloud Function example (Node.js) to send email via SendGrid when a new contact is created.
+Place this in functions/index.js inside a Firebase functions project.
+
+// index.js
+const functions = require('firebase-functions');
+const admin = require('firebase-admin');
+const sgMail = require('@sendgrid/mail');
+admin.initializeApp();
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+exports.sendContactEmail = functions.firestore.document('contacts/{docId}').onCreate(async (snap, ctx) => {
+  const data = snap.data();
+  const msg = {
+    to: 'hello@yourdomain.com',
+    from: 'noreply@yourdomain.com',
+    subject: `New contact from ${data.name}`,
+    text: `${data.name} <${data.email}>\n\n${data.message}`
+  };
+  try { await sgMail.send(msg); }
+  catch (err){ console.error('SendGrid error', err); }
+});
+
+Deploy with:
+  firebase deploy --only functions
+
+Set SENDGRID_API_KEY in functions config or environment before deploy.
+-->
+
+<script>
+  const themeToggle = document.getElementById('themeToggle');
+  let currentTheme = localStorage.getItem('theme') || 'light';
+  document.documentElement.setAttribute('data-theme', currentTheme);
+  themeToggle.textContent = currentTheme === 'light' ? '🌙 Dark' : '☀️ Light';
+
+  themeToggle.addEventListener('click', () => {
+    currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    localStorage.setItem('theme', currentTheme);
+    themeToggle.textContent = currentTheme === 'light' ? '🌙 Dark' : '☀️ Light';
+  });
+</script>
+</body>
+</html>
